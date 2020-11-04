@@ -317,8 +317,10 @@ class TracedCursor:
         span.set_attribute(
             "component", self._db_api_integration.database_component
         )
-        span.set_attribute("db.type", self._db_api_integration.database_type)
-        span.set_attribute("db.instance", self._db_api_integration.database)
+        span.set_attribute(
+            "db.system", self._db_api_integration.database_component
+        )
+        span.set_attribute("db.name", self._db_api_integration.database)
         span.set_attribute("db.statement", statement)
 
         for (

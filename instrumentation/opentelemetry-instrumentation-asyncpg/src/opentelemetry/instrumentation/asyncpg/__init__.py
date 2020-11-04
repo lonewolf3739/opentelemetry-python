@@ -49,11 +49,18 @@ _APPLIED = "_opentelemetry_tracer"
 
 
 def _hydrate_span_from_args(connection, query, parameters) -> dict:
-    span_attributes = {"db.type": "sql"}
+    span_attributes = {"db.system": "postgresql"}
 
     params = getattr(connection, "_params", None)
-    span_attributes["db.instance"] = getattr(params, "database", None)
+    span_attributes["db.name"] = getattr(params, "database", None)
     span_attributes["db.user"] = getattr(params, "user", None)
+
+    host = getattr(parameters, "host", None)
+    port = getattr(parameters, "port", None)
+    if host:
+        span_attributes["net.peer.name"] = host
+    if port:
+        span_attributes["net.peer.port"] = port
 
     if query is not None:
         span_attributes["db.statement"] = query

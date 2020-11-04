@@ -70,7 +70,7 @@ class TestFunctionalMysql(TestBase):
         self.assertIsNotNone(db_span.parent)
         self.assertIs(db_span.parent, root_span.get_span_context())
         self.assertIs(db_span.kind, trace_api.SpanKind.CLIENT)
-        self.assertEqual(db_span.attributes["db.instance"], MYSQL_DB_NAME)
+        self.assertEqual(db_span.attributes["db.name"], MYSQL_DB_NAME)
         self.assertEqual(db_span.attributes["net.peer.name"], MYSQL_HOST)
         self.assertEqual(db_span.attributes["net.peer.port"], MYSQL_PORT)
 

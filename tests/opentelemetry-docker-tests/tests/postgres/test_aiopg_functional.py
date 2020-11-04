@@ -78,9 +78,7 @@ class TestFunctionalAiopgConnect(TestBase):
         self.assertIsNotNone(child_span.parent)
         self.assertIs(child_span.parent, root_span.get_span_context())
         self.assertIs(child_span.kind, trace_api.SpanKind.CLIENT)
-        self.assertEqual(
-            child_span.attributes["db.instance"], POSTGRES_DB_NAME
-        )
+        self.assertEqual(child_span.attributes["db.name"], POSTGRES_DB_NAME)
         self.assertEqual(child_span.attributes["net.peer.name"], POSTGRES_HOST)
         self.assertEqual(child_span.attributes["net.peer.port"], POSTGRES_PORT)
 
@@ -159,9 +157,7 @@ class TestFunctionalAiopgCreatePool(TestBase):
         self.assertIsNotNone(child_span.parent)
         self.assertIs(child_span.parent, root_span.get_span_context())
         self.assertIs(child_span.kind, trace_api.SpanKind.CLIENT)
-        self.assertEqual(
-            child_span.attributes["db.instance"], POSTGRES_DB_NAME
-        )
+        self.assertEqual(child_span.attributes["db.name"], POSTGRES_DB_NAME)
         self.assertEqual(child_span.attributes["net.peer.name"], POSTGRES_HOST)
         self.assertEqual(child_span.attributes["net.peer.port"], POSTGRES_PORT)
 

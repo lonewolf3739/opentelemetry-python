@@ -49,9 +49,9 @@ class TestFunctionalAsyncPG(TestBase):
         self.assertEqual(
             spans[0].attributes,
             {
-                "db.type": "sql",
+                "db.system": "postgresql",
                 "db.user": POSTGRES_USER,
-                "db.instance": POSTGRES_DB_NAME,
+                "db.name": POSTGRES_DB_NAME,
                 "db.statement": "SELECT 42;",
             },
         )
@@ -63,9 +63,9 @@ class TestFunctionalAsyncPG(TestBase):
         self.assertEqual(
             spans[0].attributes,
             {
-                "db.type": "sql",
+                "db.system": "postgresql",
                 "db.user": POSTGRES_USER,
-                "db.instance": POSTGRES_DB_NAME,
+                "db.name": POSTGRES_DB_NAME,
                 "db.statement": "SELECT 42;",
             },
         )
@@ -81,9 +81,9 @@ class TestFunctionalAsyncPG(TestBase):
         self.assertEqual(3, len(spans))
         self.assertEqual(
             {
-                "db.instance": POSTGRES_DB_NAME,
+                "db.name": POSTGRES_DB_NAME,
                 "db.user": POSTGRES_USER,
-                "db.type": "sql",
+                "db.system": "postgresql",
                 "db.statement": "BEGIN;",
             },
             spans[0].attributes,
@@ -91,9 +91,9 @@ class TestFunctionalAsyncPG(TestBase):
         self.assertIs(StatusCode.UNSET, spans[0].status.status_code)
         self.assertEqual(
             {
-                "db.instance": POSTGRES_DB_NAME,
+                "db.name": POSTGRES_DB_NAME,
                 "db.user": POSTGRES_USER,
-                "db.type": "sql",
+                "db.system": "postgresql",
                 "db.statement": "SELECT 42;",
             },
             spans[1].attributes,
@@ -101,9 +101,9 @@ class TestFunctionalAsyncPG(TestBase):
         self.assertIs(StatusCode.UNSET, spans[1].status.status_code)
         self.assertEqual(
             {
-                "db.instance": POSTGRES_DB_NAME,
+                "db.name": POSTGRES_DB_NAME,
                 "db.user": POSTGRES_USER,
-                "db.type": "sql",
+                "db.system": "postgresql",
                 "db.statement": "COMMIT;",
             },
             spans[2].attributes,
@@ -122,9 +122,9 @@ class TestFunctionalAsyncPG(TestBase):
         self.assertEqual(3, len(spans))
         self.assertEqual(
             {
-                "db.instance": POSTGRES_DB_NAME,
+                "db.name": POSTGRES_DB_NAME,
                 "db.user": POSTGRES_USER,
-                "db.type": "sql",
+                "db.system": "postgresql",
                 "db.statement": "BEGIN;",
             },
             spans[0].attributes,
@@ -132,9 +132,9 @@ class TestFunctionalAsyncPG(TestBase):
         self.assertIs(StatusCode.UNSET, spans[0].status.status_code)
         self.assertEqual(
             {
-                "db.instance": POSTGRES_DB_NAME,
+                "db.name": POSTGRES_DB_NAME,
                 "db.user": POSTGRES_USER,
-                "db.type": "sql",
+                "db.system": "postgresql",
                 "db.statement": "SELECT 42::uuid;",
             },
             spans[1].attributes,
@@ -144,9 +144,9 @@ class TestFunctionalAsyncPG(TestBase):
         )
         self.assertEqual(
             {
-                "db.instance": POSTGRES_DB_NAME,
+                "db.name": POSTGRES_DB_NAME,
                 "db.user": POSTGRES_USER,
-                "db.type": "sql",
+                "db.system": "postgresql",
                 "db.statement": "ROLLBACK;",
             },
             spans[2].attributes,
@@ -161,13 +161,13 @@ class TestFunctionalAsyncPG(TestBase):
         self.assertEqual(
             spans[0].attributes,
             {
-                "db.type": "sql",
+                "db.system": "postgresql",
                 "db.user": POSTGRES_USER,
                 # This shouldn't be set because we don't capture parameters by
                 # default
                 #
                 # "db.statement.parameters": "('1',)",
-                "db.instance": POSTGRES_DB_NAME,
+                "db.name": POSTGRES_DB_NAME,
                 "db.statement": "SELECT $1;",
             },
         )
@@ -205,10 +205,10 @@ class TestFunctionalAsyncPG_CaptureParameters(TestBase):
         self.assertEqual(
             spans[0].attributes,
             {
-                "db.type": "sql",
+                "db.system": "postgresql",
                 "db.user": POSTGRES_USER,
                 "db.statement.parameters": "('1',)",
-                "db.instance": POSTGRES_DB_NAME,
+                "db.name": POSTGRES_DB_NAME,
                 "db.statement": "SELECT $1;",
             },
         )
@@ -220,10 +220,10 @@ class TestFunctionalAsyncPG_CaptureParameters(TestBase):
         self.assertEqual(
             spans[0].attributes,
             {
-                "db.type": "sql",
+                "db.system": "postgresql",
                 "db.user": POSTGRES_USER,
                 "db.statement.parameters": "('1',)",
-                "db.instance": POSTGRES_DB_NAME,
+                "db.name": POSTGRES_DB_NAME,
                 "db.statement": "SELECT $1;",
             },
         )
@@ -234,11 +234,11 @@ class TestFunctionalAsyncPG_CaptureParameters(TestBase):
         self.assertEqual(len(spans), 1)
         self.assertEqual(
             {
-                "db.type": "sql",
+                "db.system": "postgresql",
                 "db.statement": "SELECT $1;",
                 "db.statement.parameters": "([['1'], ['2']],)",
                 "db.user": POSTGRES_USER,
-                "db.instance": POSTGRES_DB_NAME,
+                "db.name": POSTGRES_DB_NAME,
             },
             spans[0].attributes,
         )
@@ -251,8 +251,8 @@ class TestFunctionalAsyncPG_CaptureParameters(TestBase):
         self.assertEqual(
             spans[0].attributes,
             {
-                "db.type": "sql",
-                "db.instance": POSTGRES_DB_NAME,
+                "db.system": "postgresql",
+                "db.name": POSTGRES_DB_NAME,
                 "db.user": POSTGRES_USER,
                 "db.statement.parameters": "(1, 2, 3)",
                 "db.statement": "SELECT 42;",

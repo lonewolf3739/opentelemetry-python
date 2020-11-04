@@ -30,6 +30,9 @@ def _create_engine(engine_args):
     # create a SQLAlchemy engine
     config = dict(engine_args)
     url = config.pop("url")
+    creator = config.get("creator")
+    if creator:
+        return creator()
     return create_engine(url, **config)
 
 
@@ -112,7 +115,10 @@ class SQLAlchemyTestMixin(TestBase):
     def _check_span(self, span):
         self.assertEqual(span.name, "{}.query".format(self.VENDOR))
         self.assertEqual(span.attributes.get("service"), self.SERVICE)
-        self.assertEqual(span.attributes.get(_DB), self.SQL_DB)
+        if _DB not in span.attributes:
+            print(self.VENDOR, self.SERVICE, self.SQL_DB, self.ENGINE_ARGS)
+            err
+        self.assertEqual(span.attributes[_DB], self.SQL_DB)
         self.assertIs(span.status.status_code, trace.status.StatusCode.UNSET)
         self.assertGreater((span.end_time - span.start_time), 0)
 
@@ -127,7 +133,8 @@ class SQLAlchemyTestMixin(TestBase):
         span = spans[0]
         self._check_span(span)
         self.assertIn("INSERT INTO players", span.attributes.get(_STMT))
-        self.assertEqual(span.attributes.get(_ROWS), 1)
+        rows = _ROWS.format(self.VENDOR)
+        self.assertEqual(span.attributes.get(rows), 1)
         self.check_meta(span)
 
     def test_session_query(self):

@@ -44,9 +44,9 @@ class PostgresTestCase(SQLAlchemyTestMixin):
 
     __test__ = True
 
-    VENDOR = "postgres"
+    VENDOR = "postgresql"
     SQL_DB = "opentelemetry-tests"
-    SERVICE = "postgres"
+    SERVICE = "postgresql"
     ENGINE_ARGS = {
         "url": "postgresql://%(user)s:%(password)s@%(host)s:%(port)s/%(dbname)s"
         % POSTGRES_CONFIG
@@ -88,9 +88,9 @@ class PostgresCreatorTestCase(PostgresTestCase):
     of `PostgresTestCase`, but it uses a specific `creator` function.
     """
 
-    VENDOR = "postgres"
+    VENDOR = "postgresql"
     SQL_DB = "opentelemetry-tests"
-    SERVICE = "postgres"
+    SERVICE = "postgresql"
     ENGINE_ARGS = {
         "url": "postgresql://",
         "creator": lambda: psycopg2.connect(**POSTGRES_CONFIG),

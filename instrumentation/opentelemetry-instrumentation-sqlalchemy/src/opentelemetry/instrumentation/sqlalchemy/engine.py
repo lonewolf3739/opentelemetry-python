@@ -24,9 +24,9 @@ _HOST = "net.peer.name"
 _PORT = "net.peer.port"
 # Database semantic conventions here:
 # https://github.com/open-telemetry/opentelemetry-specification/blob/master/specification/trace/semantic_conventions/database.md
-_ROWS = "sql.rows"  # number of rows returned by a query
+_ROWS = "db.{}.rows"  # number of rows returned by a query
 _STMT = "db.statement"
-_DB = "db.type"
+_DB = "db.name"
 _URL = "db.url"
 
 
@@ -39,7 +39,7 @@ def _normalize_vendor(vendor):
         return "sqlite"
 
     if "postgres" in vendor or vendor == "psycopg2":
-        return "postgres"
+        return "postgresql"
 
     return vendor
 
@@ -81,6 +81,7 @@ class EngineTracer:
         with self.tracer.use_span(self.current_span, end_on_exit=False):
             if self.current_span.is_recording():
                 self.current_span.set_attribute("service", self.vendor)
+                self.current_span.set_attribute("db.system", self.vendor)
                 self.current_span.set_attribute(_STMT, statement)
 
                 if not _set_attributes_from_url(
@@ -101,7 +102,8 @@ class EngineTracer:
                 and cursor.rowcount >= 0
                 and self.current_span.is_recording()
             ):
-                self.current_span.set_attribute(_ROWS, cursor.rowcount)
+                rows = _ROWS.format(self.vendor)
+                self.current_span.set_attribute(rows, cursor.rowcount)
         finally:
             self.current_span.end()
 
