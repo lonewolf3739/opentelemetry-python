@@ -206,6 +206,19 @@ class RequestsIntegrationTestBase(abc.ABC):
         finally:
             propagators.set_global_textmap(previous_propagator)
 
+    def test_name_callback(self):
+        RequestsInstrumentor().uninstrument()
+
+        def name_callback():
+            return "requests-name-callback"
+
+        RequestsInstrumentor().instrument(name_callback=name_callback)
+        response = self.perform_request(self.URL)
+        self.assertEqual(True, response.ok)
+
+        span = self.assert_span()
+        self.assertEqual(span.name, "requests-name-callback")
+
     def test_span_callback(self):
         RequestsInstrumentor().uninstrument()
 
