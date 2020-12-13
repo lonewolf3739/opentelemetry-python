@@ -62,6 +62,7 @@ API
 import base64
 import logging
 import socket
+from typing import Optional
 
 from thrift.protocol import TBinaryProtocol, TCompactProtocol
 from thrift.transport import THttpClient, TTransport
@@ -143,7 +144,7 @@ class JaegerSpanExporter(SpanExporter):
         self._collector = None
 
     @property
-    def agent_client(self):
+    def agent_client(self) -> AgentClientUDP:
         if self._agent_client is None:
             self._agent_client = AgentClientUDP(
                 host_name=self.agent_host_name, port=self.agent_port
@@ -151,7 +152,7 @@ class JaegerSpanExporter(SpanExporter):
         return self._agent_client
 
     @property
-    def collector(self):
+    def collector(self) -> Optional[Collector]:
         if self._collector is not None:
             return self._collector
 
