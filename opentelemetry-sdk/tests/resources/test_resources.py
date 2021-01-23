@@ -44,6 +44,7 @@ class TestResources(unittest.TestCase):
             resources.TELEMETRY_SDK_NAME: "opentelemetry",
             resources.TELEMETRY_SDK_LANGUAGE: "python",
             resources.TELEMETRY_SDK_VERSION: resources.OPENTELEMETRY_SDK_VERSION,
+            resources.DEFAULT_SERVICE_NAME_KEY: resources.DEFAULT_SERVICE_NAME_VALUE,
         }
 
         resource = resources.Resource.create(attributes)
@@ -103,6 +104,7 @@ class TestResources(unittest.TestCase):
             resources.TELEMETRY_SDK_NAME: "opentelemetry",
             resources.TELEMETRY_SDK_LANGUAGE: "python",
             resources.TELEMETRY_SDK_VERSION: resources.OPENTELEMETRY_SDK_VERSION,
+            resources.DEFAULT_SERVICE_NAME_KEY: resources.DEFAULT_SERVICE_NAME_VALUE,
         }
 
         attributes_copy = attributes.copy()
