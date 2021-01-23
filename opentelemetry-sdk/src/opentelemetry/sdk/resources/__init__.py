@@ -99,6 +99,8 @@ OPENTELEMETRY_SDK_VERSION = pkg_resources.get_distribution(
     "opentelemetry-sdk"
 ).version
 OTEL_RESOURCE_ATTRIBUTES = "OTEL_RESOURCE_ATTRIBUTES"
+DEFAULT_SERVICE_NAME_KEY = "service.name"
+DEFAULT_SERVICE_NAME_VALUE = "unknown_service"
 
 
 class Resource:
@@ -144,6 +146,7 @@ _DEFAULT_RESOURCE = Resource(
         TELEMETRY_SDK_LANGUAGE: "python",
         TELEMETRY_SDK_NAME: "opentelemetry",
         TELEMETRY_SDK_VERSION: OPENTELEMETRY_SDK_VERSION,
+        DEFAULT_SERVICE_NAME_KEY: DEFAULT_SERVICE_NAME_VALUE,
     }
 )
 
