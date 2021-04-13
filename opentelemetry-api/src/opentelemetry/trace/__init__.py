@@ -154,26 +154,26 @@ class SpanKind(Enum):
     https://github.com/open-telemetry/opentelemetry-specification/pull/226.
     """
 
+    INTERNAL = 0
     #: Default value. Indicates that the span is used internally in the
     # application.
-    INTERNAL = 0
 
+    SERVER = 1
     #: Indicates that the span describes an operation that handles a remote
     # request.
-    SERVER = 1
 
-    #: Indicates that the span describes a request to some remote service.
     CLIENT = 2
+    #: Indicates that the span describes a request to some remote service.
 
+    PRODUCER = 3
     #: Indicates that the span describes a producer sending a message to a
     #: broker. Unlike client and server, there is usually no direct critical
     #: path latency relationship between producer and consumer spans.
-    PRODUCER = 3
 
+    CONSUMER = 4
     #: Indicates that the span describes a consumer receiving a message from a
     #: broker. Unlike client and server, there is usually no direct critical
     #: path latency relationship between producer and consumer spans.
-    CONSUMER = 4
 
 
 class TracerProvider(ABC):
@@ -288,7 +288,7 @@ class Tracer(ABC):
             record_exception: Whether to record any exceptions raised within the
                 context as error event on the span.
             set_status_on_exception: Only relevant if the returned span is used
-                in a with/context manager. Defines wether the span status will
+                in a with/context manager. Defines whether the span status will
                 be automatically set to ERROR when an uncaught exception is
                 raised in the span with block. The span status won't be set by
                 this mechanism if it was previously set manually.
@@ -353,7 +353,7 @@ class Tracer(ABC):
             record_exception: Whether to record any exceptions raised within the
                 context as error event on the span.
             set_status_on_exception: Only relevant if the returned span is used
-                in a with/context manager. Defines wether the span status will
+                in a with/context manager. Defines whether the span status will
                 be automatically set to ERROR when an uncaught exception is
                 raised in the span with block. The span status won't be set by
                 this mechanism if it was previously set manually.
@@ -511,7 +511,7 @@ def use_span(
         record_exception: Whether to record any exceptions raised within the
             context as error event on the span.
         set_status_on_exception: Only relevant if the returned span is used
-            in a with/context manager. Defines wether the span status will
+            in a with/context manager. Defines whether the span status will
             be automatically set to ERROR when an uncaught exception is
             raised in the span with block. The span status won't be set by
             this mechanism if it was previously set manually.
