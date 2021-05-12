@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# pylint: disable=no-member,too-many-locals,no-self-use
 import abc
 from typing import Optional, Sequence
 
@@ -21,7 +22,8 @@ from google.protobuf.timestamp_pb2 import Timestamp
 from opentelemetry.exporter.jaeger.proto.grpc.gen import model_pb2
 
 from opentelemetry.sdk.trace import ReadableSpan, StatusCode
-from opentelemetry.trace import SpanKind
+from opentelemetry.sdk.resources import SERVICE_NAME, Resource
+from opentelemetry.trace import SpanKind, get_tracer_provider
 from opentelemetry.util import types
 
 
@@ -35,71 +37,6 @@ OTLP_JAEGER_SPAN_KIND = {
 
 NAME_KEY = "otel.library.name"
 VERSION_KEY = "otel.library.version"
-
-
-def _nsec_to_usec_round(nsec: int) -> int:
-    """Round nanoseconds to microseconds"""
-    return (nsec + 500) // 10 ** 3
-
-
-def _convert_int_to_i64(val):
-    """Convert integer to signed int64 (i64)"""
-    if val > 0x7FFFFFFFFFFFFFFF:
-        val -= 0x10000000000000000
-    return val
-
-
-class Translator(abc.ABC):
-    def __init__(self, max_tag_value_length: Optional[int] = None):
-        self._max_tag_value_length = max_tag_value_length
-
-    @abc.abstractmethod
-    def _translate_span(self, span):
-        """Translates span to jaeger format.
-
-        Args:
-            span: span to translate
-        """
-
-    @abc.abstractmethod
-    def _extract_tags(self, span):
-        """Extracts tags from span and returns list of jaeger Tags.
-
-        Args:
-            span: span to extract tags
-        """
-
-    @abc.abstractmethod
-    def _extract_refs(self, span):
-        """Extracts references from span and returns list of jaeger SpanRefs.
-
-        Args:
-            span: span to extract references
-        """
-
-    @abc.abstractmethod
-    def _extract_logs(self, span):
-        """Extracts logs from span and returns list of jaeger Logs.
-
-        Args:
-            span: span to extract logs
-        """
-
-
-class Translate:
-    def __init__(self, spans):
-        self.spans = spans
-
-    def _translate(self, translator: Translator):
-        translated_spans = []
-        for span in self.spans:
-            # pylint: disable=protected-access
-            translated_span = translator._translate_span(span)
-            translated_spans.append(translated_span)
-        return translated_spans
-
-
-# pylint: disable=no-member,too-many-locals,no-self-use
 
 
 def _trace_id_to_bytes(trace_id: int) -> bytes:
@@ -219,14 +156,36 @@ def _proto_timestamp_from_epoch_nanos(nsec: int) -> Timestamp:
     return Timestamp(seconds=seconds, nanos=nanos)
 
 
-class ProtobufTranslator(Translator):
-    def __init__(
-        self, svc_name: str, max_tag_value_length: Optional[int] = None
-    ):
-        super().__init__(max_tag_value_length)
-        self.svc_name = svc_name
+def _get_service_name(spans):
+    # Populate service_name from first span
+    # We restrict any SpanProcessor to be only associated with a single
+    # TracerProvider, so it is safe to assume that all Spans in a single
+    # batch all originate from one TracerProvider (and in turn have all
+    # the same service.name)
+    service_name = spans[0].resource.attributes.get(SERVICE_NAME)
+    if service_name:
+        return service_name
 
-    def _translate_span(self, span: ReadableSpan) -> model_pb2.Span:
+    tracer_provider = get_tracer_provider()
+    if getattr(tracer_provider, "resource", None):
+        return tracer_provider.resource.attributes[SERVICE_NAME]
+    return Resource.create().attributes.get(SERVICE_NAME)
+
+
+class _ProtobufEncoder:
+    def __init__(self, max_tag_value_length: Optional[int] = None):
+        self._max_tag_value_length = max_tag_value_length
+
+    def encode(self, spans: Sequence[ReadableSpan]) -> model_pb2.Batch:
+        service_name = _get_service_name(spans)
+        batch = []
+        for span in spans:
+            batch.append(self._encode_span(span, service_name))
+        return model_pb2.Batch(batch)
+
+    def _encode_span(
+        self, span: ReadableSpan, service_name: str
+    ) -> model_pb2.Span:
 
         ctx = span.get_span_context()
         # pb2 span expects in byte format
@@ -244,7 +203,7 @@ class ProtobufTranslator(Translator):
         flags = int(ctx.trace_flags)
 
         process = model_pb2.Process(
-            service_name=self.svc_name,
+            service_name=service_name,
             tags=_extract_resource_tags(span, self._max_tag_value_length),
         )
         jaeger_span = model_pb2.Span(

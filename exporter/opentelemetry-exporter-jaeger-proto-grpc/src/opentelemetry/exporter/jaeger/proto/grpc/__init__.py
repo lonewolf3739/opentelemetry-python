@@ -66,7 +66,7 @@ API
 
 import logging
 from os import environ
-from typing import Optional
+from typing import Optional, Sequence
 
 from grpc import ChannelCredentials, insecure_channel, secure_channel
 
@@ -79,14 +79,11 @@ from opentelemetry.exporter.jaeger.proto.grpc.gen.collector_pb2 import (
 from opentelemetry.exporter.jaeger.proto.grpc.gen.collector_pb2_grpc import (
     CollectorServiceStub,
 )
-from opentelemetry.exporter.jaeger.proto.grpc.translate import (
-    ProtobufTranslator,
-    Translate,
-)
+from opentelemetry.exporter.jaeger.proto.grpc.translate import _ProtobufEncoder
 from opentelemetry.sdk.environment_variables import (
     OTEL_EXPORTER_JAEGER_ENDPOINT,
 )
-from opentelemetry.sdk.resources import SERVICE_NAME, Resource
+from opentelemetry.sdk.trace import ReadableSpan
 from opentelemetry.sdk.trace.export import SpanExporter, SpanExportResult
 
 DEFAULT_GRPC_COLLECTOR_ENDPOINT = "localhost:14250"
@@ -99,7 +96,7 @@ class JaegerExporter(SpanExporter):
 
     Args:
         collector_endpoint: The endpoint of the Jaeger collector that uses
-            Protobuf via gRPC.
+            Protobuf via gRPC. The default endpoint is "localhost:14250".
         insecure: True if collector has no encryption or authentication
         credentials: Credentials for server authentication.
         max_tag_value_length: Max length string attribute values can have. Set to None to disable.
@@ -113,73 +110,27 @@ class JaegerExporter(SpanExporter):
         max_tag_value_length: Optional[int] = None,
     ):
         self._max_tag_value_length = max_tag_value_length
-
-        self.collector_endpoint = _parameter_setter(
-            param=collector_endpoint,
-            env_variable=environ.get(OTEL_EXPORTER_JAEGER_ENDPOINT),
-            default=None,
+        self.collector_endpoint = collector_endpoint or environ.get(
+            OTEL_EXPORTER_JAEGER_ENDPOINT, DEFAULT_GRPC_COLLECTOR_ENDPOINT
         )
-        self._grpc_client = None
-        self.insecure = insecure
         self.credentials = util._get_credentials(credentials)
-        tracer_provider = trace.get_tracer_provider()
-        self.service_name = (
-            tracer_provider.resource.attributes[SERVICE_NAME]
-            if getattr(tracer_provider, "resource", None)
-            else Resource.create().attributes.get(SERVICE_NAME)
-        )
+        if insecure:
+            self._stub = CollectorServiceStub(
+                insecure_channel(self.collector_endpoint)
+            )
+        else:
+            self._stub = CollectorServiceStub(
+                secure_channel(self.collector_endpoint, self.credentials)
+            )
+        self._encoder = _ProtobufEncoder(self._max_tag_value_length)
 
-    @property
-    def _collector_grpc_client(self) -> Optional[CollectorServiceStub]:
-        endpoint = self.collector_endpoint or DEFAULT_GRPC_COLLECTOR_ENDPOINT
-
-        if self._grpc_client is None:
-            if self.insecure:
-                self._grpc_client = CollectorServiceStub(
-                    insecure_channel(endpoint)
-                )
-            else:
-                self._grpc_client = CollectorServiceStub(
-                    secure_channel(endpoint, self.credentials)
-                )
-        return self._grpc_client
-
-    def export(self, spans) -> SpanExportResult:
-        # Populate service_name from first span
-        # We restrict any SpanProcessor to be only associated with a single
-        # TracerProvider, so it is safe to assume that all Spans in a single
-        # batch all originate from one TracerProvider (and in turn have all
-        # the same service.name)
+    def export(self, spans: Sequence[ReadableSpan]) -> SpanExportResult:
         if spans:
-            service_name = spans[0].resource.attributes.get(SERVICE_NAME)
-            if service_name:
-                self.service_name = service_name
-        translator = Translate(spans)
-        pb_translator = ProtobufTranslator(
-            self.service_name, self._max_tag_value_length
-        )
-        jaeger_spans = translator._translate(pb_translator)
-        batch = model_pb2.Batch(spans=jaeger_spans)
-        request = PostSpansRequest(batch=batch)
-        self._collector_grpc_client.PostSpans(request)
+            batch = self._encoder.encode(spans)
+            request = PostSpansRequest(batch=batch)
+            self._stub.PostSpans(request)
 
         return SpanExportResult.SUCCESS
 
     def shutdown(self):
         pass
-
-
-def _parameter_setter(param, env_variable, default):
-    """Returns value according to the provided data.
-
-    Args:
-        param: Constructor parameter value
-        env_variable: Environment variable related to the parameter
-        default: Constructor parameter default value
-    """
-    if param is None:
-        res = env_variable or default
-    else:
-        res = param
-
-    return res

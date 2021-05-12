@@ -46,56 +46,6 @@ def _convert_int_to_i64(val):
     return val
 
 
-class Translator(abc.ABC):
-    def __init__(self, max_tag_value_length: Optional[int] = None):
-        self._max_tag_value_length = max_tag_value_length
-
-    @abc.abstractmethod
-    def _translate_span(self, span):
-        """Translates span to jaeger format.
-
-        Args:
-            span: span to translate
-        """
-
-    @abc.abstractmethod
-    def _extract_tags(self, span):
-        """Extracts tags from span and returns list of jaeger Tags.
-
-        Args:
-            span: span to extract tags
-        """
-
-    @abc.abstractmethod
-    def _extract_refs(self, span):
-        """Extracts references from span and returns list of jaeger SpanRefs.
-
-        Args:
-            span: span to extract references
-        """
-
-    @abc.abstractmethod
-    def _extract_logs(self, span):
-        """Extracts logs from span and returns list of jaeger Logs.
-
-        Args:
-            span: span to extract logs
-        """
-
-
-class Translate:
-    def __init__(self, spans):
-        self.spans = spans
-
-    def _translate(self, translator: Translator):
-        translated_spans = []
-        for span in self.spans:
-            # pylint: disable=protected-access
-            translated_span = translator._translate_span(span)
-            translated_spans.append(translated_span)
-        return translated_spans
-
-
 def _get_string_tag(key, value: str) -> TCollector.Tag:
     """Returns jaeger string tag."""
     return TCollector.Tag(key=key, vStr=value, vType=TCollector.TagType.STRING)
@@ -148,8 +98,14 @@ def _translate_attribute(
     return None
 
 
-class ThriftTranslator(Translator):
-    def _translate_span(self, span: ReadableSpan) -> TCollector.Span:
+class _ThriftEncoder:
+    def __init__(self, max_tag_value_length):
+        self._max_tag_value_length = max_tag_value_length
+
+    def encode(self, spans: Sequence[ReadableSpan]) -> TCollector.Batch:
+        pass
+
+    def _encode_span(self, span: ReadableSpan) -> TCollector.Span:
         ctx = span.get_span_context()
         trace_id = ctx.trace_id
         span_id = ctx.span_id
