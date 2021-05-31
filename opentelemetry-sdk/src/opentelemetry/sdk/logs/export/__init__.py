@@ -16,8 +16,10 @@ import abc
 import collections
 import enum
 import logging
+import sys
 import threading
-from typing import Deque, List, Optional, Sequence
+from os import linesep
+from typing import IO, Callable, Deque, List, Optional, Sequence
 
 from opentelemetry.context import attach, detach, set_value
 from opentelemetry.sdk.logs import LogData, LogProcessor
@@ -261,3 +263,28 @@ class BatchLogProcessor(LogProcessor):
         if not ret:
             _logger.warning("Timeout was exceeded in force_flush().")
         return ret
+
+
+class ConsoleLogExporter(LogExporter):
+    """Implementation of :class:`LogExporter` that prints OTEL log records to the
+    console.
+
+    This class can be used for diagnostic purposes.
+    """
+
+    def __init__(
+        self,
+        out: IO = sys.stdout,
+        formatter: Callable[
+            [LogData], str
+        ] = lambda log_data: log_data.log_record.to_json()
+        + linesep,
+    ):
+        self.out = out
+        self.formatter = formatter
+
+    def export(self, batch: Sequence[LogData]) -> LogExportResult:
+        for log_data in batch:
+            self.out.write(self.formatter(log_data))
+        self.out.flush()
+        return LogExportResult.SUCCESS

@@ -17,9 +17,13 @@
 import abc
 import atexit
 import concurrent.futures
+import json
 import logging
 import os
 import threading
+import time
+from collections import OrderedDict
+from types import MappingProxyType
 from typing import Any, Callable, Optional, Tuple, Union, cast
 
 from opentelemetry.sdk.environment_variables import (
@@ -30,8 +34,13 @@ from opentelemetry.sdk.logs.severity import (
     std_to_opentelemetry,
 )
 from opentelemetry.sdk.resources import Resource
+from opentelemetry.sdk.util import BoundedDict, ns_to_iso_str
 from opentelemetry.sdk.util.instrumentation import InstrumentationInfo
-from opentelemetry.trace import get_current_span
+from opentelemetry.trace import (
+    format_span_id,
+    format_trace_id,
+    get_current_span,
+)
 from opentelemetry.trace.span import TraceFlags
 from opentelemetry.util._providers import _load_provider
 from opentelemetry.util._time import _time_ns
@@ -91,6 +100,35 @@ class OTELLogRecord:
             resource=resource,
             attributes=attributes,
         )
+
+    def to_json(self, indent=4):
+
+        timestamp = None
+        if self.timestamp:
+            timestamp = ns_to_iso_str(self.timestamp)
+
+        f_span = OrderedDict()
+
+        f_span["name"] = self.name
+        f_span["body"] = self.body
+        f_span["timestamp"] = timestamp
+        f_span["severity_test"] = self.severity_text
+        f_span["severity_number"] = self.severity_number.value
+        f_span["trace_id"] = "0x{}".format(format_trace_id(self.trace_id))
+        f_span["span_id"] = "0x{}".format(format_span_id(self.span_id))
+        f_span["trace_flags"] = int(self.trace_flags)
+        f_span["attributes"] = self._format_attributes(self.attributes)
+        f_span["resource"] = self._resource.attributes
+
+        return json.dumps(f_span, indent=indent)
+
+    @staticmethod
+    def _format_attributes(attributes):
+        if isinstance(attributes, BoundedDict):
+            return attributes._dict  # pylint: disable=protected-access
+        if isinstance(attributes, MappingProxyType):
+            return attributes.copy()
+        return attributes
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, OTELLogRecord):
